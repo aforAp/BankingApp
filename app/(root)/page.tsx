@@ -2,9 +2,10 @@
 const Home = () => {
   return (
     <div>
-      Home
+      Home land
     </div>
   )
 }
 
 export default Home;
+
