@@ -306,15 +306,15 @@
   
   /* Bank Card */
   .bank-card {
-    @apply relative flex h-47.5 w-[270px] max-w-[270px] justify-between rounded-[20px] border border-white! bg-bankGradient shadow-creditCard backdrop-blur-[6px];
+    @apply relative flex h-47.5 w-[270px] max-w-[270px] justify-between overflow-hidden rounded-[20px] border border-white! bg-bankGradient shadow-creditCard backdrop-blur-[6px];
   }
   
   .bank-card_content {
-    @apply relative z-10 flex size-full max-w-[228px] flex-col justify-between rounded-l-[20px] bg-bankGradientLight px-5 pb-4 pt-5;
+    @apply relative z-10 flex size-full max-w-[218px] flex-col justify-between rounded-l-[20px] bg-bankGradientLight px-5 pb-4 pt-5;
   }
   
   .bank-card_icon {
-    @apply relative flex size-full flex-1 flex-col items-end justify-between rounded-r-[20px] z-10 -mt-13 bg-cover bg-center bg-no-repeat py-5 pr-5;
+    @apply absolute right-0 top-0 z-20 max-w-[150px] flex h-full w-16 flex-col items-end justify-between rounded-r-[20px] bg-cover bg-center bg-no-repeat p-3;
   }
   
   /* Bank Info */
@@ -464,5 +464,4 @@
     @apply text-16 font-semibold text-black-2 max-xl:hidden;
   }
 }
-
 
