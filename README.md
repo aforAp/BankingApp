@@ -2,6 +2,24 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Environment variables
+
+Copy `.env.example` to `.env.local`, then set `MONGODB_URI` to your MongoDB
+connection string. Generate a separate key for encrypting SSNs:
+
+```bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
+```
+
+Set the generated value as `SSN_ENCRYPTION_KEY` in `.env.local`. Keep both
+values out of source control, and use your deployment platform's secret manager
+for deployed environments. Losing or changing the encryption key makes stored
+SSNs unreadable.
+
+Generate another random value for `AUTH_SECRET` (at least 32 bytes) and add it
+to `.env.local`; this signs the session cookie issued after sign-in. Keep it
+secret and use the same value across all app instances.
+
 First, run the development server:
 
 ```bash

@@ -428,7 +428,7 @@
   }
   
   .footer_email {
-    @apply flex flex-1 flex-col justify-center max-xl:hidden;
+    @apply flex min-w-0 flex-1 flex-col justify-center max-xl:hidden;
   }
   
   .footer_name-mobile {
@@ -436,7 +436,7 @@
   }
   
   .footer_email-mobile {
-    @apply flex flex-1 flex-col justify-center;
+    @apply flex min-w-0 flex-1 flex-col justify-center;
   }
   
   .footer_image {
@@ -464,4 +464,3 @@
     @apply text-16 font-semibold text-black-2 max-xl:hidden;
   }
 }
-

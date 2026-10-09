@@ -1,8 +1,13 @@
 import HeaderBox from "@/components/HeaderBox";
 import RightSidebar from "@/components/RightSidebar";
 import TotalBalanceBox from "@/components/TotalBalanceBox";
-const Home = () => {
-    const loggedIn = {firstName: 'Adrian', lastName: 'JSM', email: 'contact@jsmaster.pro'};
+import { getLoggedInUser } from '@/app/api/auth/sign-in/route';
+const Home = async () => {
+      const users = await getLoggedInUser();
+      console.log("the data was");
+      console.log(users);
+      const loggedIn = {firstName: users.firstname, lastName: users.lastname, email: users.email};
+    //const loggedIn = {firstName: data.firstname, lastName: data.lastname, email: data.email};
 
   return (
     <section className="home">
@@ -19,7 +24,7 @@ const Home = () => {
       RECENT TRANSACTIONS
     </div>
     <RightSidebar 
-    user={loggedIn}
+    userLoggedIn={loggedIn}
     transactions={[]}
     banks={[{currentBalance: 123.50}, {currentBalance: 500.50}]}
     />
