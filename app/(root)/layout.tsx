@@ -5,7 +5,7 @@ import Image from "next/image";
 import MobileNavBar from "@/components/MobileNavBar";
 import { getLoggedInUser } from '@/app/api/auth/sign-in/route';
 
-type UserDetails = {
+type UserDetail = {
   firstName: string,
   lastName: string,
   email: string,
@@ -13,7 +13,7 @@ type UserDetails = {
 
 export default async function RootLayout({ children }: Readonly<{children: React.ReactNode}>) {
       const users = await getLoggedInUser();
-      const loggedIn: UserDetails = {firstName: users.firstname, lastName: users.lastname, email: users.email};
+      const loggedIn: UserDetail = {firstName: users.firstname, lastName: users.lastname, email: users.email};
 console.log(loggedIn);
   return (
     <main className="flex h-screen w-full font-inter">
