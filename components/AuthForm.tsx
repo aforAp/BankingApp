@@ -12,6 +12,7 @@ import { cn, authFormSchema } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from "sonner"
+import PlaidLink from './PlaidLink';
 
 const AuthForm = ({type}: {type: string}) => {
   const [user, setUser] =useState(null);
@@ -29,6 +30,7 @@ const AuthForm = ({type}: {type: string}) => {
       firstname: "",
       lastname: "",
       address: "",
+      city: "",
       state: "",
       postalcode: "",
       dob: "",
@@ -46,21 +48,26 @@ const AuthForm = ({type}: {type: string}) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      const result: { message?: string, status: number | string } = await response.json();
+      const result: { message?: string } = await response.json();
 
-      if(response.status === 201) {
-          router.push('/sign-in');
-      }
       if (!response.ok) {
         throw new Error(result.message ?? 'Unable to create your account.');
       }
 
       form.reset();
+      toast.success(result.message ?? "Account created successfully.", {
+        position: "top-right",
+      });
+      router.push('/sign-in');
     }
     catch (error: unknown) {
       console.error(
         "Sign-up request failed:",
         error instanceof Error ? error.message : "Unknown error",
+      );
+      toast.error(
+        error instanceof Error ? error.message : "Unable to create your account.",
+        { position: "top-right" },
       );
     } finally {
       setIsLoading(false);
@@ -117,7 +124,7 @@ const AuthForm = ({type}: {type: string}) => {
   </header>
   {user ? (
     <div className="flex flex-col gap-4">
-        {/*Plaid Link */}
+        <PlaidLink user={user} variant="primary" />
 
         </div>
   ): (
@@ -132,9 +139,10 @@ const AuthForm = ({type}: {type: string}) => {
             <CustomInput control={form.control} name="lastname" label="Last Name" placeholder="Enter your Last Name"  />
             </div>
             <CustomInput control={form.control} name="address" label="Address" placeholder="Enter your specific address"  />
+            <CustomInput control={form.control} name="city" label="City" placeholder="Enter your city" />
             <div className='flex gap-4'>
             <CustomInput control={form.control} name="state" label="State" placeholder="Example: NY"  />
-            <CustomInput control={form.control} name="postalcode" label="Postal Code" placeholder="ex: 11101"  />
+            <CustomInput control={form.control} name="postalcode" label="Postal Code" placeholder="5-digit US ZIP code" />
             </div>
              <div className='flex gap-4'>
             <CustomInput control={form.control} name="dob" label="Date of Birth" placeholder="YYYY-MM-DD"  />

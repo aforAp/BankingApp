@@ -5,6 +5,7 @@ const userSchema = new Schema(
     firstname: { type: String, required: true, trim: true },
     lastname: { type: String, required: true, trim: true },
     address: { type: String, required: true, trim: true },
+    city: { type: String, required: true, trim: true },
     state: { type: String, required: true, trim: true, uppercase: true },
     postalcode: { type: String, required: true, trim: true },
     dob: { type: String, required: true },
@@ -21,7 +22,7 @@ const userSchema = new Schema(
       type: String,
       required: false,    
     },
-    dwallowCustomerId: {
+    dwollaCustomerId: {
       type: String,
       required: false
     }
