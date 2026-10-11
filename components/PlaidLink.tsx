@@ -1,54 +1,109 @@
-import { PlaidLinkOnSuccess, PlaidLinkOptions, usePlaidLink } from "react-plaid-link"
-import { Button } from "./ui/button"
-import { useCallback, useEffect, useState } from "react"
+"use client";
+
+import Script from "next/script";
+import {
+  PlaidLinkOnSuccess,
+  PlaidLinkOptions,
+  usePlaidLink,
+} from "react-plaid-link";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createLinkToken } from "@/app/api/auth/sign-in/route";
+import {
+  createLinkToken,
+  exchangePublicToken,
+} from "@/app/api/auth/sign-in/route";
+import { toast } from "sonner";
+import { Button } from "./ui/button";
 
-const PlaidLink = ({user, variant}: PlaidLinkProps) => {
+const PLAID_SCRIPT_URL =
+  "https://cdn.plaid.com/link/v2/stable/link-initialize.js";
 
- const [token, setToken] = useState("");
-const router = useRouter();
- useEffect(() => {
-   const getLinkToken = async () => {
-     const data = await createLinkToken(user);
-   }
-   getLinkToken();
- }, [user]);
-  const onSuccess = useCallback<PlaidLinkOnSuccess>(async (public_token: string) => {
-      //  await exchangePublicToken({
-      //   publicToken: public_token,
-      //   user,
-      //  })
-  }, [user]);
+const PlaidLink = ({ variant }: { variant?: "primary" | "ghost" }) => {
+  const [token, setToken] = useState("");
+  const [scriptReady, setScriptReady] = useState(false);
+  const linkTokenRequest = useRef<Promise<{ linkToken: string }> | null>(null);
 
-  const config: PlaidLinkOptions = {
-    token,
-    onSuccess
-  }
+  useEffect(() => {
+    let cancelled = false;
 
-  const {open, ready} = usePlaidLink(config);
+    const getLinkToken = async () => {
+      try {
+        linkTokenRequest.current ??= createLinkToken();
+        const data = await linkTokenRequest.current;
+        if (!cancelled) setToken(data.linkToken);
+      } catch (error) {
+        console.error("Failed to initialize Plaid Link:", error);
+        if (!cancelled) {
+          toast.error("Unable to connect to your bank right now.", {
+            position: "top-right",
+          });
+        }
+      }
+    };
+
+    getLinkToken();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <>
-      {variant === 'primary' ? (
-       <Button 
-       onClick={() => open()}
-       disabled={!ready}
-       className="plaidlink-primary">
-        Connect Bank
-       </Button>    
-      ): variant === 'ghost'? (
-         <Button>
-        Connect bank
-       </Button>
-      ): (
-        <Button>
-            Connect bank
-        </Button>
-      )
-    }
+      <Script
+        id="plaid-link"
+        src={PLAID_SCRIPT_URL}
+        onReady={() => setScriptReady(true)}
+        onError={() => {
+          toast.error("Unable to load the bank connection service.", {
+            position: "top-right",
+          });
+        }}
+      />
+      {token && scriptReady && (
+        <PlaidLinkButton token={token} variant={variant} />
+      )}
     </>
-  )
-}
+  );
+};
 
-export default PlaidLink
+const PlaidLinkButton = ({
+  token,
+  variant,
+}: {
+  token: string;
+  variant?: "primary" | "ghost";
+}) => {
+  const router = useRouter();
+
+  const onSuccess = useCallback<PlaidLinkOnSuccess>(async (publicToken) => {
+    try {
+      await exchangePublicToken({ publicToken });
+      toast.success("Bank connected successfully.", { position: "top-right" });
+      router.replace("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Failed to finish connecting the bank:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Unable to finish connecting your bank. Please try again.",
+        { position: "top-right" },
+      );
+    }
+  }, [router]);
+
+  const config: PlaidLinkOptions = { token, onSuccess };
+  const { open, ready } = usePlaidLink(config);
+
+  return (
+    <Button
+      onClick={() => open()}
+      disabled={!ready}
+      className={variant === "primary" ? "plaidlink-primary" : "plaidlink-ghost"}
+    >
+      Connect Bank
+    </Button>
+  );
+};
+
+export default PlaidLink;

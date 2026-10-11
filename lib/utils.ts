@@ -216,7 +216,13 @@ export const authFormSchema = (type: string) => z.object({
     .max(50, "Last name must be at most 50 characters."),
   address: type === 'sign-in' ? z.string().optional() : z.string().trim().min(1, "Address is required.").max(500, "exceeded the limit"),
   city: type === 'sign-in' ? z.string().optional() : z.string().trim().min(1, "City is required.").max(100, "City must be at most 100 characters."),
-  state:type === 'sign-in' ? z.string().optional() : z.string().trim().min(2, "State is required.").max(2),
+  state:
+    type === "sign-in"
+      ? z.string().optional()
+      : z
+          .string()
+          .trim()
+          .regex(/^[A-Za-z]{2}$/, "Enter a valid 2-letter state abbreviation."),
   postalcode: type === 'sign-in'
     ? z.string().optional()
     : z.string()

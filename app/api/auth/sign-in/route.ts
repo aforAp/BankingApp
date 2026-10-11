@@ -11,7 +11,13 @@ import { authFormSchema, encryptId, parseStringify } from "@/lib/utils";
 import User from "@/models/User";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { CountryCode, ProcessorTokenCreateRequest, ProcessorTokenCreateRequestProcessorEnum } from "plaid";
+import {
+  CountryCode,
+  ProcessorTokenCreateRequest,
+  ProcessorTokenCreateRequestProcessorEnum,
+  Products,
+  type LinkTokenCreateRequest,
+} from "plaid";
 import { plaidClient } from "@/lib/plaid";
 import { revalidatePath } from "next/cache";
 import { addFundingSource } from "@/lib/dwolla.actions";
@@ -85,14 +91,10 @@ export async function getLoggedInUser() {
  const token = (await cookies()).get('session')?.value;
  if(!token) return null;
  const session = verifySessionToken(token);
- console.log("the session");
- console.log(session);
  if(!session) return null;
   await connectToDatabase();
   const user = await User.findById(session.sub)
-  .select("firstname lastname email");
-console.log('the user');
-console.log(user);
+  .select("firstname lastname email dwollaCustomerId");
   if(!user) redirect('/sign-up');
   return parseStringify(user);
 }
@@ -103,79 +105,78 @@ export async function logoutAccount () {
   return { message: "Logged out successfully." };
 }
 
-export const createLinkToken = async (user: User) => {
-  try {
-   const tokenParams = {
-    user: {
-      client_user_id: user._id,
-    },
-    client_name: user.name,
-    products: ['auth'] as Products[],
-    language: 'en',
-    country_codes: ['US'] as CountryCode[],
-   }
-   const response = await plaidClient.linkTokenCreate(tokenParams);
-   return parseStringify({
-    linkToken: response.data.link_token
-   })
+export const createLinkToken = async () => {
+  const user = await getLoggedInUser();
+  if (!user) {
+    throw new Error("You must be signed in to connect a bank account.");
   }
-  catch (error) {
-    console.log(error);
-  }
-}
 
-export const createBankAccount = async({userId, bankId, accountId, accessToken, fundingSourceUrl, shareableId}: createBankAccountProps) => {
   try {
-     const bankAccount = new BankAccount({
-      userId, bankId, accountId, accessToken, fundingSourceUrl, shareableId
-     });
-
-     return bankAccount;
-  }  catch(error) {
-
+    const tokenParams: LinkTokenCreateRequest = {
+      user: {
+        client_user_id: String(user._id),
+      },
+      client_name: `${user.firstname} ${user.lastname}`,
+      products: ['auth'] as Products[],
+      language: "en",
+      country_codes: ['US'] as CountryCode[],
+    };
+    const response = await plaidClient.linkTokenCreate(tokenParams);
+    return { linkToken: response.data.link_token };
+  } catch (error) {
+    console.error(
+      "Failed to create Plaid Link token:",
+      error instanceof Error ? error.name : "Unknown error",
+    );
+    throw new Error("Unable to start bank connection. Please try again.");
   }
 }
-export const exchangePublicToken = async ({
-  publicToken,
-  user,
-}: exchangePublicTokenProps) => {
+
+export const exchangePublicToken = async ({ publicToken }: { publicToken: string }) => {
   try {
+    const user = await getLoggedInUser();
+    if (!user) {
+      throw new Error("You must be signed in to connect a bank account.");
+    }
+    if (!user.dwollaCustomerId) {
+      throw new Error("No Dwolla customer is associated with this account.");
+    }
+
     const response = await plaidClient.itemPublicTokenExchange({
-      public_token: publicToken
+      public_token: publicToken,
     });
-    //once we generated the token we need to change that to public token
 
     const accessToken = response.data.access_token;
     const itemId = response.data.item_id;
 
-    //Get account Information frok plaid using the access token
     const accountResponse = await plaidClient.accountsGet({
       access_token: accessToken,
     });
 
     const accountData = accountResponse.data.accounts[0];
+    if (!accountData) {
+      throw new Error("Plaid did not return a bank account.");
+    }
 
-    //Create a processor token for Dwolla using the access token and account ID
     const request: ProcessorTokenCreateRequest = {
       access_token: accessToken,
       account_id: accountData.account_id,
-      processor: "dwolla" as ProcessorTokenCreateRequestProcessorEnum,
-    }
+      processor: ProcessorTokenCreateRequestProcessorEnum.Dwolla,
+    };
     const processorTokenResponse = await plaidClient.processorTokenCreate(request);
     const processorToken = processorTokenResponse.data.processor_token;
 
-    //Create a funding source URL for the account using the Dwolla customer ID, processor token, and bank name
     const fundingSourceUrl = await addFundingSource({
       dwollaCustomerId: user.dwollaCustomerId,
       processorToken,
       bankName: accountData.name,
     });
 
-    //if  the funding source URL is not created, throw an error.
-    if(!fundingSourceUrl) throw Error;
+    if (!fundingSourceUrl) {
+      throw new Error("Dwolla did not create a funding source.");
+    }
 
-    //create a bank account using the user ID, item ID, account ID, acc
-    await createBankAccount({
+    const bankAccount = new BankAccount({
       userId: user._id,
       bankId: itemId,
       accountId: accountData.account_id,
@@ -183,16 +184,15 @@ export const exchangePublicToken = async ({
       fundingSourceUrl,
       shareableId: encryptId(accountData.account_id),
     });
-    //revalidate the path to reflect the changes
+    await bankAccount.save();
     revalidatePath("/");
 
-    //return a success message
-    return parseStringify({
-      publicTokenExchange: "complete",
-    });
+    return { publicTokenExchange: "complete" };
+  } catch (error) {
+    console.error(
+      "Failed to exchange Plaid public token:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
+    throw new Error("Unable to finish connecting your bank. Please try again.");
   }
-  catch (error) {
-    console.log(error);
-  }
-}
-
+};

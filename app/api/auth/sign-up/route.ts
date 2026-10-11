@@ -2,7 +2,12 @@
 import { NextResponse } from "next/server";
 import { authFormSchema, extractCustomerIdFromUrl } from "@/lib/utils";
 import { connectToDatabase } from "@/lib/mongodb";
-import { encryptSsn, hashPassword } from "@/lib/auth-security";
+import {
+  createSessionToken,
+  encryptSsn,
+  hashPassword,
+  SESSION_MAX_AGE_SECONDS,
+} from "@/lib/auth-security";
 import User from "@/models/User";
 import { createDwollaCustomer } from "@/lib/dwolla.actions";
 
@@ -59,13 +64,27 @@ export async function POST(request: Request) {
     const passwordHash = await hashPassword(data.password);
     stage = "SSN encryption";
     const ssnEncrypted = encryptSsn(data.ssn);
+    const user = new User({
+      firstname: data.firstname,
+      lastname: data.lastname,
+      address: data.address,
+      city: data.city,
+      state: data.state.toUpperCase(),
+      postalcode: data.postalcode,
+      dob: data.dob,
+      ssnEncrypted,
+      email,
+      passwordHash,
+    });
+    const sessionToken = createSessionToken(user._id.toString());
+
     stage = "Dwolla customer creation";
     const dwollaCustomerUrl = await createDwollaCustomer({
       firstName: data.firstname,
       lastName: data.lastname,
       address1: data.address,
       city: data.city,
-      state: data.state,
+      state: data.state.toUpperCase(),
       postalCode: data.postalcode,
       dateOfBirth: data.dob,
       ssn: data.ssn,
@@ -77,26 +96,30 @@ export async function POST(request: Request) {
 
     const dwollaCustomerId = extractCustomerIdFromUrl(dwollaCustomerUrl);
     stage = "MongoDB user creation";
-    const user = new User({
-      firstname: data.firstname,
-      lastname: data.lastname,
-      address: data.address,
-      city: data.city,
-      state: data.state,
-      postalcode: data.postalcode,
-      dob: data.dob,
-      ssnEncrypted,
-      dwollaCustomerUrl,
-      dwollaCustomerId,
-      email,
-      passwordHash,
-    });
+    user.dwollaCustomerUrl = dwollaCustomerUrl;
+    user.dwollaCustomerId = dwollaCustomerId;
     await user.save();
 
-    return NextResponse.json(
-      { message: "Account created successfully." },
+    const response = NextResponse.json(
+      {
+        message: "Account created successfully.",
+        user: {
+          id: user._id.toString(),
+          firstname: user.firstname,
+          lastname: user.lastname,
+          email: user.email,
+        },
+      },
       { status: 201 },
     );
+    response.cookies.set("session", sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: SESSION_MAX_AGE_SECONDS,
+    });
+    return response;
   } catch (error) {
     if (
       error &&

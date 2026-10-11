@@ -4,6 +4,7 @@ import "../globals.css";
 import Image from "next/image";
 import MobileNavBar from "@/components/MobileNavBar";
 import { getLoggedInUser } from '@/app/api/auth/sign-in/route';
+import { redirect } from "next/navigation";
 
 type UserDetail = {
   firstName: string,
@@ -13,8 +14,11 @@ type UserDetail = {
 
 export default async function RootLayout({ children }: Readonly<{children: React.ReactNode}>) {
       const users = await getLoggedInUser();
+      
+      if(!users) {
+        redirect('/sign-in');
+      }
       const loggedIn: UserDetail = {firstName: users.firstname, lastName: users.lastname, email: users.email};
-console.log(loggedIn);
   return (
     <main className="flex h-screen w-full font-inter">
         <Sidebar user={loggedIn} />

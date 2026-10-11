@@ -15,7 +15,12 @@ import { toast } from "sonner"
 import PlaidLink from './PlaidLink';
 
 const AuthForm = ({type}: {type: string}) => {
-  const [user, setUser] =useState(null);
+  const [user, setUser] = useState<{
+    id: string;
+    firstname: string;
+    lastname: string;
+    email: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
      
@@ -48,17 +53,22 @@ const AuthForm = ({type}: {type: string}) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      const result: { message?: string } = await response.json();
+      const result: {
+        message?: string;
+        user?: { id: string; firstname: string; lastname: string; email: string };
+      } = await response.json();
 
       if (!response.ok) {
         throw new Error(result.message ?? 'Unable to create your account.');
       }
-
+      if (!result.user) {
+        throw new Error("Account creation response was incomplete.");
+      }
+      setUser(result.user);
       form.reset();
       toast.success(result.message ?? "Account created successfully.", {
         position: "top-right",
       });
-      router.push('/sign-in');
     }
     catch (error: unknown) {
       console.error(
@@ -124,7 +134,7 @@ const AuthForm = ({type}: {type: string}) => {
   </header>
   {user ? (
     <div className="flex flex-col gap-4">
-        <PlaidLink user={user} variant="primary" />
+        <PlaidLink variant="primary" />
 
         </div>
   ): (
