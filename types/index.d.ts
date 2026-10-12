@@ -26,7 +26,7 @@ declare type LoginUser = {
 };
 
 declare type User = {
-  $id: string;
+  _id: string;
   email: string;
   userId: string;
   dwollaCustomerUrl: string;
@@ -201,6 +201,7 @@ declare interface BankDropdownProps {
 declare interface BankTabItemProps {
   account: Account;
   appwriteItemId?: string;
+  id: string
 }
 
 declare interface TotlaBalanceBoxProps {
@@ -214,8 +215,14 @@ declare interface FooterProps {
   type: 'mobile' | 'desktop';
 }
 
+declare interface Users {
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 declare interface RightSidebarProps {
-  user: User;
+  userLoggedIn: Users;
   transactions: Transaction[];
   banks: Bank[] & Account[];
 }
@@ -227,7 +234,7 @@ declare interface SiderbarProps {
 declare interface RecentTransactionsProps {
   accounts: Account[];
   transactions: Transaction[];
-  appwriteItemId: string;
+  id: string;
   page: number;
 }
 

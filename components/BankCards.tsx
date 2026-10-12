@@ -1,17 +1,32 @@
+"use client"
 import { formatAmount } from "@/lib/utils"
+import { Eye, EyeClosed, EyeOff } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useState } from "react"
+
 const BankCards = ({account, userName, showBalance = true}: CreditCardProps) => {
+const [toggle, setToggle] = useState<true|false>(false);
+
+function handleToggle() {
+    setToggle(prev => !prev);
+}
   return (
     <div className="flex flex-col">
         <Link href="/" className="bank-card">
           <div className="bank-card_content">
                 <h1 className="text-16 font-semibold text-white">
-                    {account.name || userName}
+                    {userName}
                 </h1>
-                <p className="font-ibm-plex-serif font-black text-white">
-                    {formatAmount(account.currentBalance)}
-                </p>
+                <div onClick={handleToggle}>
+                 {toggle ? (<p className="font-ibm-plex-serif font-black text-white flex gap-2">
+                    {(formatAmount(account.currentBalance))}{" "}<Eye />
+                </p>): (
+                  <p className="font-ibm-plex-serif font-black text-white flex gap-2">
+                    $ *******.**{" "}<EyeOff />
+                  </p>
+                )}
+                </div>
                 <article className="flex flex-col mt-12 gap-2">
                     <div className="flex justify-between">
                         <h1 className="text-12 font-semibold text-white">
