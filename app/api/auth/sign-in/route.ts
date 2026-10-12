@@ -117,7 +117,7 @@ export const createLinkToken = async () => {
         client_user_id: String(user._id),
       },
       client_name: `${user.firstname} ${user.lastname}`,
-      products: ['auth'] as Products[],
+      products: ["auth", "transactions"] as Products[],
       language: "en",
       country_codes: ['US'] as CountryCode[],
     };
@@ -131,6 +131,48 @@ export const createLinkToken = async () => {
     throw new Error("Unable to start bank connection. Please try again.");
   }
 }
+
+export const createTransactionsUpdateLinkToken = async ({
+  accountId,
+}: {
+  accountId: string;
+}) => {
+  const user = await getLoggedInUser();
+  if (!user) {
+    throw new Error("You must be signed in to update bank permissions.");
+  }
+
+  try {
+    await connectToDatabase();
+    const bank = await BankAccount.findOne({
+      accountId,
+      userId: user._id,
+    }).select("+accessToken");
+
+    if (!bank) {
+      throw new Error("Bank account not found for the signed-in user.");
+    }
+
+    const tokenParams: LinkTokenCreateRequest = {
+      user: {
+        client_user_id: String(user._id),
+      },
+      client_name: `${user.firstname} ${user.lastname}`,
+      access_token: bank.accessToken,
+      additional_consented_products: ["transactions"] as Products[],
+      language: "en",
+      country_codes: ["US"] as CountryCode[],
+    };
+    const response = await plaidClient.linkTokenCreate(tokenParams);
+    return { linkToken: response.data.link_token };
+  } catch (error) {
+    console.error(
+      "Failed to create Plaid transactions consent link token:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
+    throw new Error("Unable to request Transactions access for this bank.");
+  }
+};
 
 export const exchangePublicToken = async ({ publicToken }: { publicToken: string }) => {
   try {

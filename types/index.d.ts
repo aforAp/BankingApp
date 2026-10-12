@@ -54,12 +54,12 @@ declare type Account = {
   currentBalance: number;
   officialName: string;
   mask: string;
-  institutionId: string;
+  institutionId?: string;
   name: string;
   type: string;
   subtype: string;
-  appwriteItemId: string;
-  sharableId: string;
+  mongoBankId: string;
+  shareableId: string;
 };
 
 declare type Transaction = {
@@ -82,13 +82,14 @@ declare type Transaction = {
 };
 
 declare type Bank = {
-  $id: string;
+  $id?: string;
+  _id: string;
   accountId: string;
   bankId: string;
   accessToken: string;
   fundingSourceUrl: string;
   userId: string;
-  sharableId: string;
+  shareableId: string;
 };
 
 declare type AccountTypes =
@@ -261,7 +262,7 @@ declare interface getAccountsProps {
 }
 
 declare interface getAccountProps {
-  appwriteItemId: string;
+  accountId: string;
 }
 
 declare interface getInstitutionProps {
@@ -307,7 +308,7 @@ declare interface getBanksProps {
 }
 
 declare interface getBankProps {
-  documentId: string;
+  accountId: string;
 }
 
 declare interface getBankByAccountIdProps {

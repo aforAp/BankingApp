@@ -3,7 +3,10 @@ import Link from "next/link";
 import BankCards from "./BankCards";
 
 const RightSidebar = ({userLoggedIn, transactions, banks}: RightSidebarProps) => {
-  return (
+    console.log(banks.data[0].id);
+    const bankClone = banks?.data;
+    console.log("the right side bar");
+      return (
     <aside className="right-sidebar">
         <section className="flex flex-col pb-8">
             <div className="profile-banner" />
@@ -34,13 +37,13 @@ const RightSidebar = ({userLoggedIn, transactions, banks}: RightSidebarProps) =>
                    </h2>
                 </Link>
             </div>
-            {banks?.length > 0 && (
+            {bankClone?.length > 0 && (
                 <div className="relative flex flex-1 flex-col items-center justify-center gap-5">
                    <div className="relative z-10">
-                     <BankCards key={banks[0].$id} account={banks[0]} userName={`${userLoggedIn.firstName} ${userLoggedIn.lastName}`} showBalance={false} /> 
-                   {banks[1] && (
+                     <BankCards key={bankClone[0].id} account={bankClone[0]} userName={`${userLoggedIn.firstName} ${userLoggedIn.lastName}`} showBalance={false} /> 
+                   {bankClone[1] && (
                     <div className="absolute right-0 top-8 z-0 w-[90%]">
-                      <BankCards key={banks[1].$id} account={banks[1]} userName={`${userLoggedIn.firstName} ${userLoggedIn.lastName}`} showBalance={false} />
+                      <BankCards key={bankClone[1]?.id} account={bankClone[1]} userName={`${userLoggedIn.firstName} ${userLoggedIn.lastName}`} showBalance={false} />
                    </div>
                    )}
                 </div>

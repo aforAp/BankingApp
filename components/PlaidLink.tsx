@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createLinkToken,
+  createTransactionsUpdateLinkToken,
   exchangePublicToken,
 } from "@/app/api/auth/sign-in/route";
 import { toast } from "sonner";
@@ -18,7 +19,13 @@ import { Button } from "./ui/button";
 const PLAID_SCRIPT_URL =
   "https://cdn.plaid.com/link/v2/stable/link-initialize.js";
 
-const PlaidLink = ({ variant }: { variant?: "primary" | "ghost" }) => {
+const PlaidLink = ({
+  variant,
+  accountId,
+}: {
+  variant?: "primary" | "ghost";
+  accountId?: string;
+}) => {
   const [token, setToken] = useState("");
   const [scriptReady, setScriptReady] = useState(false);
   const linkTokenRequest = useRef<Promise<{ linkToken: string }> | null>(null);
@@ -28,7 +35,9 @@ const PlaidLink = ({ variant }: { variant?: "primary" | "ghost" }) => {
 
     const getLinkToken = async () => {
       try {
-        linkTokenRequest.current ??= createLinkToken();
+        linkTokenRequest.current ??= accountId
+          ? createTransactionsUpdateLinkToken({ accountId })
+          : createLinkToken();
         const data = await linkTokenRequest.current;
         if (!cancelled) setToken(data.linkToken);
       } catch (error) {
@@ -45,7 +54,7 @@ const PlaidLink = ({ variant }: { variant?: "primary" | "ghost" }) => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [accountId]);
 
   return (
     <>
@@ -60,7 +69,7 @@ const PlaidLink = ({ variant }: { variant?: "primary" | "ghost" }) => {
         }}
       />
       {token && scriptReady && (
-        <PlaidLinkButton token={token} variant={variant} />
+        <PlaidLinkButton token={token} variant={variant} accountId={accountId} />
       )}
     </>
   );
@@ -69,16 +78,25 @@ const PlaidLink = ({ variant }: { variant?: "primary" | "ghost" }) => {
 const PlaidLinkButton = ({
   token,
   variant,
+  accountId,
 }: {
   token: string;
   variant?: "primary" | "ghost";
+  accountId?: string;
 }) => {
   const router = useRouter();
 
   const onSuccess = useCallback<PlaidLinkOnSuccess>(async (publicToken) => {
     try {
-      await exchangePublicToken({ publicToken });
-      toast.success("Bank connected successfully.", { position: "top-right" });
+      if (accountId) {
+        toast.success("Bank permissions updated.", { position: "top-right" });
+      } else {
+        if (!publicToken) {
+          throw new Error("Plaid did not return a public token.");
+        }
+        await exchangePublicToken({ publicToken });
+        toast.success("Bank connected successfully.", { position: "top-right" });
+      }
       router.replace("/");
       router.refresh();
     } catch (error) {
@@ -90,7 +108,7 @@ const PlaidLinkButton = ({
         { position: "top-right" },
       );
     }
-  }, [router]);
+  }, [accountId, router]);
 
   const config: PlaidLinkOptions = { token, onSuccess };
   const { open, ready } = usePlaidLink(config);
@@ -101,7 +119,7 @@ const PlaidLinkButton = ({
       disabled={!ready}
       className={variant === "primary" ? "plaidlink-primary" : "plaidlink-ghost"}
     >
-      Connect Bank
+      {accountId ? "Grant Transactions Access" : "Connect Bank"}
     </Button>
   );
 };
